@@ -7,6 +7,7 @@ import argparse
 import csv
 import io
 import json
+import sys
 from collections import Counter
 from pathlib import Path
 from statistics import median
@@ -20,6 +21,12 @@ FIELDS = [
     "forecast_reach", "er_pct", "cpv_rub", "decision", "reason",
     "risk_evidence", "source_mode",
 ]
+
+
+def configure_utf8_output() -> None:
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(encoding="utf-8")
 
 
 def read_candidates(local_path: Path, sheet_url: str | None) -> tuple[list[dict[str, str]], str]:
@@ -143,6 +150,7 @@ def parse_args() -> argparse.Namespace:
 
 
 def main() -> int:
+    configure_utf8_output()
     args = parse_args()
     candidates, source_mode = read_candidates(args.input, args.sheet_url)
     with args.evidence.open(encoding="utf-8") as handle:

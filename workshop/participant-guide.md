@@ -9,7 +9,7 @@
 Внутри Codex отправьте:
 
 ```text
-$skill-installer Установи навык по ссылке https://github.com/neiro-viktor/influencer-skill-lab/tree/v1.0-classroom/skills/proverka-blogerov. После установки покажи точный путь к папке навыка и ничего пока не запускай.
+$skill-installer Установи навык по ссылке https://github.com/neiro-viktor/influencer-skill-lab/tree/v1.0.1-classroom/skills/proverka-blogerov. После установки покажи точный путь к папке навыка и ничего пока не запускай.
 ```
 
 Перезапустите Codex. Введите `/skills` и убедитесь, что виден «Проверка блогеров».

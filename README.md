@@ -26,6 +26,6 @@ python3 -m unittest discover -s tests -v
 
 ## Установка через Codex
 
-Попросите Codex с помощью `$skill-installer` установить навык по фиксированной ссылке `https://github.com/neiro-viktor/influencer-skill-lab/tree/v1.0-classroom/skills/proverka-blogerov`. После установки перезапустите Codex, затем вызовите `$proverka-blogerov`.
+Попросите Codex с помощью `$skill-installer` установить навык по фиксированной ссылке `https://github.com/neiro-viktor/influencer-skill-lab/tree/v1.0.1-classroom/skills/proverka-blogerov`. После установки перезапустите Codex, затем вызовите `$proverka-blogerov`.
 
 Подробный маршрут находится в [workshop/participant-guide.md](workshop/participant-guide.md).

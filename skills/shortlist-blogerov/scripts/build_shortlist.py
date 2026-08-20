@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import sys
 from collections import Counter
 from pathlib import Path
 
@@ -14,6 +15,12 @@ OUTPUT_FIELDS = [
     "rank", "candidate_id", "handle", "price_rub", "forecast_views", "cpv_rub",
     "screening_decision", "shortlist_decision", "shortlist_reason", "risk_evidence",
 ]
+
+
+def configure_utf8_output() -> None:
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(encoding="utf-8")
 
 
 def number(value: str) -> float | None:
@@ -115,6 +122,7 @@ def parse_args() -> argparse.Namespace:
 
 
 def main() -> int:
+    configure_utf8_output()
     args = parse_args()
     with args.screening.open(encoding="utf-8-sig", newline="") as handle:
         rows = list(csv.DictReader(handle))

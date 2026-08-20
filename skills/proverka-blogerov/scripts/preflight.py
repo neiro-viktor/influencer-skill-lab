@@ -7,7 +7,14 @@ import platform
 import sys
 
 
+def configure_utf8_output() -> None:
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(encoding="utf-8")
+
+
 def main() -> int:
+    configure_utf8_output()
     root = Path(__file__).resolve().parents[1]
     required = [root / "assets" / "bloggers.csv", root / "assets" / "evidence.json"]
     missing = [str(path) for path in required if not path.is_file()]
