@@ -11,6 +11,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 SCREEN_SCRIPT = ROOT / "skills" / "proverka-blogerov" / "scripts" / "demo_screening.py"
 SHORTLIST_SCRIPT = ROOT / "skills" / "shortlist-blogerov" / "scripts" / "build_shortlist.py"
+VERIFY_SCRIPT = ROOT / "skills" / "shortlist-blogerov" / "scripts" / "verify_handoff.py"
 BRIEF = ROOT / "skills" / "shortlist-blogerov" / "assets" / "campaign-brief.json"
 
 
@@ -18,7 +19,7 @@ class PipelineTest(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.root = Path(self.temp.name)
-        subprocess.run([sys.executable, str(SCREEN_SCRIPT), "--output", str(self.root / "screening")], check=True, capture_output=True, text=True)
+        subprocess.run([sys.executable, str(SCREEN_SCRIPT), "--output", str(self.root / "screening")], check=True, capture_output=True, text=True, encoding="utf-8")
 
     def tearDown(self):
         self.temp.cleanup()
@@ -54,7 +55,7 @@ class PipelineTest(unittest.TestCase):
         subprocess.run([
             sys.executable, str(SCREEN_SCRIPT), "--sheet-url", "http://127.0.0.1:9/not-there",
             "--output", str(fallback),
-        ], check=True, capture_output=True, text=True)
+        ], check=True, capture_output=True, text=True, encoding="utf-8")
         payload = json.loads((fallback / "screening.json").read_text(encoding="utf-8"))
         self.assertEqual(payload["source_mode"], "local-demo")
         self.assertEqual(len(payload["records"]), 6)
@@ -64,7 +65,7 @@ class PipelineTest(unittest.TestCase):
             sys.executable, str(SHORTLIST_SCRIPT),
             "--screening", str(self.root / "screening" / "screening.csv"),
             "--brief", str(BRIEF), "--output", str(self.root / "shortlist"),
-        ], check=True, capture_output=True, text=True)
+        ], check=True, capture_output=True, text=True, encoding="utf-8")
         rows = self.rows(self.root / "shortlist" / "shortlist.csv")
         self.assertEqual(rows["b01"]["shortlist_decision"], "Шорт-лист")
         self.assertEqual(rows["b05"]["shortlist_decision"], "Шорт-лист")
@@ -73,6 +74,22 @@ class PipelineTest(unittest.TestCase):
         self.assertEqual(rows["b04"]["shortlist_decision"], "Отклонить")
         summary = json.loads((self.root / "shortlist" / "summary.json").read_text(encoding="utf-8"))
         self.assertLessEqual(summary["selected_budget_rub"], summary["budget_limit_rub"])
+        pilot_path = self.root / "shortlist" / "pilot-register.csv"
+        with pilot_path.open(encoding="utf-8-sig", newline="") as handle:
+            pilot = next(csv.DictReader(handle))
+        self.assertEqual(pilot["selected_candidates"], "2")
+        self.assertEqual(pilot["selected_budget_rub"], "78000")
+        self.assertEqual(pilot["evidence_file"], "shortlist.csv")
+        self.assertIn("baseline", pilot["blocker"])
+        classroom = subprocess.run([
+            sys.executable, str(VERIFY_SCRIPT), "--pilot", str(pilot_path), "--allow-classroom",
+        ], capture_output=True, text=True, encoding="utf-8")
+        self.assertEqual(classroom.returncode, 0, classroom.stdout + classroom.stderr)
+        strict = subprocess.run([
+            sys.executable, str(VERIFY_SCRIPT), "--pilot", str(pilot_path),
+        ], capture_output=True, text=True, encoding="utf-8")
+        self.assertEqual(strict.returncode, 2)
+        self.assertIn("CLASSROOM_ONLY", strict.stdout)
 
     def test_budget_overflow_moves_worst_cpv_to_reserve(self):
         brief = json.loads(BRIEF.read_text(encoding="utf-8"))
@@ -84,11 +101,33 @@ class PipelineTest(unittest.TestCase):
             sys.executable, str(SHORTLIST_SCRIPT),
             "--screening", str(self.root / "screening" / "screening.csv"),
             "--brief", str(brief_path), "--output", str(output),
-        ], check=True, capture_output=True, text=True)
+        ], check=True, capture_output=True, text=True, encoding="utf-8")
         rows = self.rows(output / "shortlist.csv")
         self.assertEqual(rows["b01"]["shortlist_decision"], "Шорт-лист")
         self.assertEqual(rows["b05"]["shortlist_decision"], "Резерв")
         self.assertIn("бюджета", rows["b05"]["shortlist_reason"])
+
+    def test_strict_handoff_passes_with_factual_contract(self):
+        brief = json.loads(BRIEF.read_text(encoding="utf-8"))
+        brief["artifact_version"] = "v2.3.0"
+        brief["pilot"]["owner"] = "руководитель инфлюенс-направления"
+        brief["pilot"]["baseline_source"] = "выгрузка задач Битрикс за контрольную неделю"
+        brief["pilot"]["deployment_contour"] = "корпоративный Codex + Bitrix24"
+        brief["pilot"]["blocker"] = "нет"
+        brief_path = self.root / "production-brief.json"
+        brief_path.write_text(json.dumps(brief, ensure_ascii=False), encoding="utf-8")
+        output = self.root / "production-shortlist"
+        subprocess.run([
+            sys.executable, str(SHORTLIST_SCRIPT),
+            "--screening", str(self.root / "screening" / "screening.csv"),
+            "--brief", str(brief_path), "--output", str(output),
+        ], check=True, capture_output=True, text=True, encoding="utf-8")
+        verified = subprocess.run([
+            sys.executable, str(VERIFY_SCRIPT),
+            "--pilot", str(output / "pilot-register.csv"),
+        ], capture_output=True, text=True, encoding="utf-8")
+        self.assertEqual(verified.returncode, 0, verified.stdout + verified.stderr)
+        self.assertIn("PASS", verified.stdout)
 
 
 

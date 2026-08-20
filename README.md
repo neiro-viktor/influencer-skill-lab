@@ -8,6 +8,7 @@
 
 - `skills/proverka-blogerov` — готовый навык с воспроизводимым деморежимом;
 - `skills/shortlist-blogerov` — эталон второго навыка, который участники собирают по аналогии;
+- `pilot-register.csv` — контракт передачи результата: версия, владелец, baseline, контур, зависимости и повторный замер;
 - `workshop` — сценарий занятия, промпты, ожидаемые результаты и план «Б»;
 - `tests` — проверки расчётов и контрактов выходных файлов.
 
@@ -22,10 +23,19 @@ python3 skills/shortlist-blogerov/scripts/build_shortlist.py \
 python3 -m unittest discover -s tests -v
 ```
 
+Учебный прогон заканчивается командой:
+
+```bash
+python3 skills/shortlist-blogerov/scripts/verify_handoff.py \
+  --pilot output/shortlist/pilot-register.csv --allow-classroom
+```
+
+Перед рабочим запуском заменить учебный baseline и владельца фактическими данными, затем получить строгий PASS без `--allow-classroom`.
+
 Скрипты используют только стандартную библиотеку Python 3.10+ и одинаково работают на macOS, Windows и Linux.
 
 ## Установка через Codex
 
-Попросите Codex с помощью `$skill-installer` установить навык по фиксированной ссылке `https://github.com/neiro-viktor/influencer-skill-lab/tree/v1.0.1-classroom/skills/proverka-blogerov`. После установки перезапустите Codex, затем вызовите `$proverka-blogerov`.
+Попросите Codex с помощью `$skill-installer` установить навык по фиксированной ссылке `https://github.com/neiro-viktor/influencer-skill-lab/tree/v1.0.2-classroom/skills/proverka-blogerov`. После установки перезапустите Codex, затем вызовите `$proverka-blogerov`.
 
 Подробный маршрут находится в [workshop/participant-guide.md](workshop/participant-guide.md).

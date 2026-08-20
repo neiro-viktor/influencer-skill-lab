@@ -16,6 +16,14 @@ OUTPUT_FIELDS = [
     "screening_decision", "shortlist_decision", "shortlist_reason", "risk_evidence",
 ]
 
+PILOT_FIELDS = [
+    "pilot_id", "process_name", "owner", "status", "artifact_version",
+    "selected_candidates", "selected_budget_rub", "baseline_value",
+    "baseline_unit", "baseline_source", "target_value", "measurement_system",
+    "deployment_contour", "dependencies", "blocker", "review_after_days",
+    "evidence_file", "handoff_rule",
+]
+
 
 def configure_utf8_output() -> None:
     for stream in (sys.stdout, sys.stderr):
@@ -110,6 +118,64 @@ def write(rows: list[dict], brief: dict, output: Path) -> None:
             lines.append(f"- {rank}**{row['handle']}** — {row['shortlist_reason']} (CPV {row['cpv_rub'] or 'нет данных'} ₽).")
         lines.append("")
     (output / "shortlist.md").write_text("\n".join(lines), encoding="utf-8")
+    write_pilot_register(rows, brief, output)
+
+
+def write_pilot_register(rows: list[dict], brief: dict, output: Path) -> None:
+    pilot = brief.get("pilot")
+    if not isinstance(pilot, dict):
+        raise SystemExit("В брифе нет объекта pilot для передачи результата в работу")
+    required = {
+        "pilot_id", "process_name", "owner", "baseline_value", "baseline_unit",
+        "baseline_source", "target_value", "measurement_system",
+        "deployment_contour", "dependencies", "blocker", "review_after_days",
+    }
+    missing = sorted(key for key in required if pilot.get(key) in (None, "", []))
+    if missing:
+        raise SystemExit("В pilot не заполнены поля: " + ", ".join(missing))
+    if not isinstance(pilot["dependencies"], list):
+        raise SystemExit("Поле pilot.dependencies должно быть непустым списком")
+    contract_text = " ".join(str(value) for value in (
+        brief.get("artifact_version", ""),
+        pilot["owner"],
+        pilot["baseline_source"],
+        pilot["deployment_contour"],
+    )).lower()
+    blocker = str(pilot["blocker"]).strip().lower()
+    no_blocker = blocker in {"нет", "отсутствует", "none", "—", "не выявлен"}
+    classroom = (
+        any(marker in contract_text for marker in ("учебн", "заменить фактическим", "synthetic", "локальн"))
+        or not no_blocker
+    )
+    selected = [row for row in rows if row["shortlist_decision"] == "Шорт-лист"]
+    record = {
+        "pilot_id": pilot["pilot_id"],
+        "process_name": pilot["process_name"],
+        "owner": pilot["owner"],
+        "status": "Готов к учебному пилоту" if classroom else "Готов к рабочему пилоту",
+        "artifact_version": brief.get("artifact_version", "unversioned"),
+        "selected_candidates": len(selected),
+        "selected_budget_rub": sum(row["price_rub"] for row in selected),
+        "baseline_value": pilot["baseline_value"],
+        "baseline_unit": pilot["baseline_unit"],
+        "baseline_source": pilot["baseline_source"],
+        "target_value": pilot["target_value"],
+        "measurement_system": pilot["measurement_system"],
+        "deployment_contour": pilot["deployment_contour"],
+        "dependencies": " | ".join(str(item) for item in pilot["dependencies"]),
+        "blocker": pilot["blocker"],
+        "review_after_days": pilot["review_after_days"],
+        "evidence_file": "shortlist.csv",
+        "handoff_rule": (
+            "До рабочего запуска заменить учебный baseline фактическим замером и назначить реального владельца"
+            if classroom else
+            "Запустить в заявленном контуре; повторный замер провести в установленный срок"
+        ),
+    }
+    with (output / "pilot-register.csv").open("w", encoding="utf-8-sig", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=PILOT_FIELDS, lineterminator="\n")
+        writer.writeheader()
+        writer.writerow(record)
 
 
 def parse_args() -> argparse.Namespace:
