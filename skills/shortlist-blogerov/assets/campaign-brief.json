@@ -4,5 +4,24 @@
   "max_cpv_rub": 5.0,
   "total_budget_rub": 90000,
   "required_platform": "TikTok",
-  "owner": "учебная команда Onegroup Digital"
+  "owner": "учебная команда Onegroup Digital",
+  "artifact_version": "v1.0.2-classroom",
+  "pilot": {
+    "pilot_id": "blogger-shortlist-v1",
+    "process_name": "Первичный отбор блогеров под интеграцию",
+    "owner": "тимлид инфлюенс-направления (учебный)",
+    "baseline_value": 45,
+    "baseline_unit": "минут на кандидата",
+    "baseline_source": "учебное предположение — заменить фактическим замером",
+    "target_value": 20,
+    "measurement_system": "Google Sheets · Реестр пилотов",
+    "deployment_contour": "GitHub release + локальный Codex",
+    "dependencies": [
+      "доступ к рабочей таблице кандидатов",
+      "владелец финального решения",
+      "фактический замер времени до пилота"
+    ],
+    "blocker": "доступ к рабочей таблице и фактический baseline ещё не подтверждены",
+    "review_after_days": 14
+  }
 }

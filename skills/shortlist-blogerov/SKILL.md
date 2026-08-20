@@ -18,8 +18,14 @@ description: "Собирает шорт-лист, резерв, отклонен
    python3 scripts/build_shortlist.py --screening ПУТЬ/screening.csv --brief assets/campaign-brief.json --output output/shortlist
    ```
 
-5. Проверить `shortlist.csv`, `shortlist.md` и `summary.json`.
-6. Сообщить состав шорт-листа, сумму бюджета, резерв и строки, требующие решения человека.
+5. Проверить `shortlist.csv`, `shortlist.md`, `summary.json` и `pilot-register.csv`.
+6. Для передачи результата прочитать [references/production-readiness.md](references/production-readiness.md) и выполнить:
+
+   ```bash
+   python3 scripts/verify_handoff.py --pilot output/shortlist/pilot-register.csv --allow-classroom
+   ```
+
+7. Сообщить состав шорт-листа, сумму бюджета, резерв, строки для решения человека и статус передачи пилота.
 
 ## Ограничения
 
@@ -28,4 +34,5 @@ description: "Собирает шорт-лист, резерв, отклонен
 - Строки «Нужна ручная проверка» сохранять в отдельном решении, а не прятать в резерв.
 - Строки «Не рекомендовать без согласования» отклонять в автоматическом результате.
 - Если сумма шорт-листа превышает бюджет, переносить кандидатов с худшим CPV в резерв и объяснять причину.
+- Не называть учебный пилот поставленным процессом. Для рабочего запуска нужны фактический baseline, реальный владелец, корпоративный контур и строгий PASS `verify_handoff.py` без `--allow-classroom`.
 - Итог остаётся рекомендацией; финальное согласование делает ответственный сотрудник.
