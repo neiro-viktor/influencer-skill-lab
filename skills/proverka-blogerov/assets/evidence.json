@@ -1,0 +1,98 @@
+{
+  "b01": {
+    "videos": [
+      {"views": 12000, "likes": 680, "comments": 54, "shares": 31},
+      {"views": 12500, "likes": 702, "comments": 58, "shares": 35},
+      {"views": 11800, "likes": 655, "comments": 49, "shares": 28},
+      {"views": 13000, "likes": 721, "comments": 63, "shares": 37},
+      {"views": 12200, "likes": 674, "comments": 52, "shares": 29},
+      {"views": 12700, "likes": 710, "comments": 61, "shares": 33},
+      {"views": 11900, "likes": 660, "comments": 50, "shares": 30},
+      {"views": 12600, "likes": 706, "comments": 57, "shares": 34},
+      {"views": 12100, "likes": 670, "comments": 51, "shares": 29},
+      {"views": 12400, "likes": 694, "comments": 55, "shares": 32}
+    ],
+    "transcript_coverage": 1.0,
+    "profanity_hits": [],
+    "competitor_hits": []
+  },
+  "b02": {
+    "videos": [
+      {"views": 2700, "likes": 125, "comments": 13, "shares": 6},
+      {"views": 3100, "likes": 141, "comments": 16, "shares": 7},
+      {"views": 2900, "likes": 132, "comments": 14, "shares": 6},
+      {"views": 3200, "likes": 146, "comments": 17, "shares": 8},
+      {"views": 3000, "likes": 137, "comments": 15, "shares": 7},
+      {"views": 2800, "likes": 129, "comments": 13, "shares": 6},
+      {"views": 3300, "likes": 151, "comments": 18, "shares": 8},
+      {"views": 2950, "likes": 134, "comments": 14, "shares": 7},
+      {"views": 3050, "likes": 139, "comments": 15, "shares": 7},
+      {"views": 2850, "likes": 130, "comments": 14, "shares": 6}
+    ],
+    "transcript_coverage": 1.0,
+    "profanity_hits": [],
+    "competitor_hits": []
+  },
+  "b03": {
+    "videos": [
+      {"views": 14200, "likes": 880, "comments": 73, "shares": 44},
+      {"views": 15100, "likes": 940, "comments": 78, "shares": 46},
+      {"views": 14800, "likes": 912, "comments": 75, "shares": 45},
+      {"views": 15600, "likes": 970, "comments": 81, "shares": 49},
+      {"views": 14900, "likes": 918, "comments": 76, "shares": 45},
+      {"views": 15300, "likes": 951, "comments": 79, "shares": 48},
+      {"views": 14600, "likes": 899, "comments": 74, "shares": 44},
+      {"views": 15000, "likes": 930, "comments": 77, "shares": 47},
+      {"views": 15200, "likes": 944, "comments": 78, "shares": 47},
+      {"views": 14700, "likes": 905, "comments": 75, "shares": 45}
+    ],
+    "transcript_coverage": 0.96,
+    "profanity_hits": [],
+    "competitor_hits": [{"video": 4, "timestamp": "00:18", "text": "Сравнивала с брендом-конкурентом «Север»"}]
+  },
+  "b04": {
+    "videos": [
+      {"views": 18800, "likes": 1050, "comments": 98, "shares": 57},
+      {"views": 20100, "likes": 1120, "comments": 106, "shares": 62},
+      {"views": 19500, "likes": 1090, "comments": 101, "shares": 60},
+      {"views": 20700, "likes": 1155, "comments": 110, "shares": 65},
+      {"views": 19900, "likes": 1112, "comments": 104, "shares": 61},
+      {"views": 20400, "likes": 1140, "comments": 108, "shares": 64},
+      {"views": 19200, "likes": 1075, "comments": 100, "shares": 59},
+      {"views": 21000, "likes": 1172, "comments": 112, "shares": 66},
+      {"views": 19700, "likes": 1101, "comments": 103, "shares": 61},
+      {"views": 20300, "likes": 1134, "comments": 107, "shares": 63}
+    ],
+    "transcript_coverage": 1.0,
+    "profanity_hits": [{"video": 7, "timestamp": "00:42", "text": "[ненормативная лексика]"}],
+    "competitor_hits": []
+  },
+  "b05": {
+    "videos": [
+      {"views": 8000, "likes": 510, "comments": 42, "shares": 24},
+      {"views": 8200, "likes": 522, "comments": 43, "shares": 25},
+      {"views": 8400, "likes": 535, "comments": 45, "shares": 26},
+      {"views": 8500, "likes": 542, "comments": 46, "shares": 27},
+      {"views": 8600, "likes": 548, "comments": 47, "shares": 27},
+      {"views": 8700, "likes": 556, "comments": 48, "shares": 28},
+      {"views": 8800, "likes": 563, "comments": 49, "shares": 29},
+      {"views": 9000, "likes": 575, "comments": 51, "shares": 30},
+      {"views": 8500, "likes": 541, "comments": 46, "shares": 27},
+      {"views": 120000, "likes": 8200, "comments": 610, "shares": 740}
+    ],
+    "transcript_coverage": 0.92,
+    "profanity_hits": [],
+    "competitor_hits": []
+  },
+  "b06": {
+    "videos": [
+      {"views": 9100, "likes": 490, "comments": 39, "shares": 21},
+      {"views": 8700, "likes": 468, "comments": 37, "shares": 20},
+      {"views": 9300, "likes": 501, "comments": 41, "shares": 22},
+      {"views": 8900, "likes": 477, "comments": 38, "shares": 20}
+    ],
+    "transcript_coverage": 0.3,
+    "profanity_hits": [],
+    "competitor_hits": []
+  }
+}
