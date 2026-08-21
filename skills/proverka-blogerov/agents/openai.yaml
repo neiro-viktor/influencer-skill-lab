@@ -1,3 +1,3 @@
 interface:
   display_name: "Проверка блогеров"
-  short_description: "Проверяет учебную подборку блогеров по метрикам и рискам"
+  short_description: "Проверяет реальные профили, прогноз, ER и CPV"
