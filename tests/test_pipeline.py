@@ -12,7 +12,12 @@ ROOT = Path(__file__).resolve().parents[1]
 SCREEN_SCRIPT = ROOT / "skills" / "proverka-blogerov" / "scripts" / "demo_screening.py"
 SHORTLIST_SCRIPT = ROOT / "skills" / "shortlist-blogerov" / "scripts" / "build_shortlist.py"
 VERIFY_SCRIPT = ROOT / "skills" / "shortlist-blogerov" / "scripts" / "verify_handoff.py"
+LIVE_SCRIPT = ROOT / "skills" / "proverka-blogerov" / "scripts" / "live_metrics.py"
 BRIEF = ROOT / "skills" / "shortlist-blogerov" / "assets" / "campaign-brief.json"
+
+live_spec = importlib.util.spec_from_file_location("live_metrics", LIVE_SCRIPT)
+live_metrics = importlib.util.module_from_spec(live_spec)
+live_spec.loader.exec_module(live_metrics)
 
 
 class PipelineTest(unittest.TestCase):
@@ -59,6 +64,46 @@ class PipelineTest(unittest.TestCase):
         payload = json.loads((fallback / "screening.json").read_text(encoding="utf-8"))
         self.assertEqual(payload["source_mode"], "local-demo")
         self.assertEqual(len(payload["records"]), 6)
+
+    def test_live_calculation_uses_real_evidence_and_excludes_outlier(self):
+        candidate = {
+            "participant": "Тест", "handle": "@real", "profile_url": "https://www.tiktok.com/@real",
+            "price_rub": "45000", "target_forecast_views": "50000",
+        }
+        videos = [
+            {"url": "https://example.test/1", "views": 10000, "likes": 500, "comments": 20, "shares": 10},
+            {"url": "https://example.test/2", "views": 12000, "likes": 600, "comments": 25, "shares": 12},
+            {"url": "https://example.test/3", "views": 90000, "likes": 5000, "comments": 200, "shares": 100},
+        ]
+        row = live_metrics.calculate(candidate, {"followers": 100000}, videos, "2026-08-21T00:00:00+00:00")
+        self.assertEqual(row["outliers_removed"], 1)
+        self.assertEqual(row["forecast_views"], 9900)
+        self.assertEqual(row["decision"], "Брать с оговорками")
+        self.assertIn("example.test/1", row["evidence_urls"])
+        self.assertNotIn("example.test/3", row["evidence_urls"].split(" | ")[:2])
+        self.assertEqual(row["speech_check"], "не проверялась в быстром live-режиме")
+
+    def test_live_input_template_is_detected_without_network(self):
+        input_path = self.root / "profiles.csv"
+        input_path.write_text(
+            "participant,profile_url,price_rub,target_forecast_views\n"
+            "Аня,https://www.tiktok.com/@public,30000,12000\n",
+            encoding="utf-8",
+        )
+        rows = live_metrics.read_candidates(input_path, None, 2)
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]["participant"], "Аня")
+        self.assertEqual(rows[0]["price_rub"], "30000")
+
+    def test_google_sheet_url_becomes_public_csv_export(self):
+        url = live_metrics.google_csv_url("https://docs.google.com/spreadsheets/d/demo-id/edit#gid=42")
+        self.assertEqual(url, "https://docs.google.com/spreadsheets/d/demo-id/export?format=csv&gid=42")
+
+    def test_youtube_channel_is_routed_to_video_listing(self):
+        self.assertEqual(
+            live_metrics.listing_url("https://www.youtube.com/@OpenAI"),
+            "https://www.youtube.com/@OpenAI/videos",
+        )
 
     def test_shortlist_pipeline(self):
         subprocess.run([

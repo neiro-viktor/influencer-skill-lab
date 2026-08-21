@@ -1,5 +1,17 @@
 # Контракт данных
 
+## Реальный quick-live
+
+Минимальный CSV содержит `profile_url`. Допустимые дополнительные поля:
+
+`participant,profile_url,price_rub,target_forecast_views`
+
+Ссылка должна вести на открытый профиль TikTok, YouTube или VK. Результат всегда
+содержит время снимка и прямые URL роликов-доказательств. Отсутствующая цена не
+додумывается: CPV остаётся пустым. Отсутствующая цель не подменяется учебной.
+
+## Воспроизводимое демо
+
 Входной CSV обязан содержать:
 
 `candidate_id,handle,platform,followers,price_rub,campaign,target_forecast_views`
