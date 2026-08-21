@@ -25,11 +25,11 @@ def runtime_python(root: Path) -> Path:
     return root / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
 
 
-def ready(python: Path) -> bool:
+def ready(python: Path, imports: tuple[str, ...] = ("yt_dlp", "curl_cffi")) -> bool:
     if not python.is_file():
         return False
     check = subprocess.run(
-        [str(python), "-c", "import yt_dlp, curl_cffi"],
+        [str(python), "-c", "; ".join(f"import {name}" for name in imports)],
         capture_output=True,
         text=True,
         check=False,
@@ -37,23 +37,35 @@ def ready(python: Path) -> bool:
     return check.returncode == 0
 
 
-def main() -> int:
+def prepare_runtime(
+    extra_dependencies: tuple[str, ...] = (),
+    extra_imports: tuple[str, ...] = (),
+) -> tuple[Path | None, int]:
     root = runtime_dir()
     python = runtime_python(root)
-    if not ready(python):
+    imports = ("yt_dlp", "curl_cffi", *extra_imports)
+    if not ready(python, imports):
         print("Подготавливаю изолированное интернет-окружение навыка…", flush=True)
         root.parent.mkdir(parents=True, exist_ok=True)
         if not python.is_file():
             venv.EnvBuilder(with_pip=True, clear=False).create(root)
         install = subprocess.run(
-            [str(python), "-m", "pip", "install", "--disable-pip-version-check", *DEPENDENCIES],
+            [str(python), "-m", "pip", "install", "--disable-pip-version-check",
+             *DEPENDENCIES, *extra_dependencies],
             check=False,
         )
         if install.returncode:
-            print("Не удалось установить лёгкие зависимости live-режима.", file=sys.stderr)
-            return install.returncode
+            print("Не удалось установить зависимости интернет-проверки.", file=sys.stderr)
+            return None, install.returncode
     else:
         print("Интернет-окружение уже готово.", flush=True)
+    return python, 0
+
+
+def main() -> int:
+    python, code = prepare_runtime()
+    if code or python is None:
+        return code or 1
 
     script = Path(__file__).with_name("live_metrics.py")
     result = subprocess.run([str(python), str(script), *sys.argv[1:]], check=False)

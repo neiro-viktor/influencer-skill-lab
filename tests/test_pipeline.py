@@ -14,11 +14,18 @@ SHORTLIST_SCRIPT = ROOT / "skills" / "shortlist-blogerov" / "scripts" / "build_s
 VERIFY_SCRIPT = ROOT / "skills" / "shortlist-blogerov" / "scripts" / "verify_handoff.py"
 LIVE_SCRIPT = ROOT / "skills" / "proverka-blogerov" / "scripts" / "live_metrics.py"
 OPEN_TEMPLATE_SCRIPT = ROOT / "skills" / "proverka-blogerov" / "scripts" / "open_onegroup_template.py"
+DEEP_BOOTSTRAP_SCRIPT = ROOT / "skills" / "proverka-blogerov" / "scripts" / "bootstrap_deep.py"
+DEEP_CHECK_SCRIPT = ROOT / "skills" / "proverka-blogerov" / "scripts" / "check_roller.py"
+MAKE_PASTE_SCRIPT = ROOT / "skills" / "proverka-blogerov" / "scripts" / "make_paste.py"
 BRIEF = ROOT / "skills" / "shortlist-blogerov" / "assets" / "campaign-brief.json"
 
 live_spec = importlib.util.spec_from_file_location("live_metrics", LIVE_SCRIPT)
 live_metrics = importlib.util.module_from_spec(live_spec)
 live_spec.loader.exec_module(live_metrics)
+
+deep_spec = importlib.util.spec_from_file_location("check_roller", DEEP_CHECK_SCRIPT)
+check_roller = importlib.util.module_from_spec(deep_spec)
+deep_spec.loader.exec_module(check_roller)
 
 
 class PipelineTest(unittest.TestCase):
@@ -118,7 +125,7 @@ class PipelineTest(unittest.TestCase):
         input_path = self.root / "onegroup.csv"
         input_path.write_text(
             "№,Ник ,Ссылка  на аккаунт ,Подписчики,Стоимость одной публикации,Прогноз просмотров по всем публикациям\n"
-            "1,avonri,https://www.tiktok.com/@avonri,,167300,\n",
+            "1,demo_creator,https://www.tiktok.com/@demo_creator,,167300,\n",
             encoding="utf-8",
         )
         candidates = live_metrics.read_candidates(input_path, None, 2)
@@ -136,6 +143,74 @@ class PipelineTest(unittest.TestCase):
         self.assertEqual(plan["writes"][0]["analysis_range"], "N2:S2")
         self.assertAlmostEqual(plan["writes"][0]["analysis_values"][2], row["er_pct"] / 100)
         self.assertIn("не проверялись", plan["writes"][0]["analysis_values"][5])
+
+    def test_deep_profanity_and_competitor_detection(self):
+        cues = [("00:00:30", "если были бы мозги я бы хуй сюда поехал"),
+                ("00:00:40", "мандариновый сок без сахара")]
+        profanity = check_roller.find_profanity(cues)
+        self.assertEqual([hit["слово"] for hit in profanity], ["хуй"])
+        competitors = check_roller.find_competitors(
+            [("00:01:06", "тот же самый яндекс маркет")],
+            {"Ozon": ["озон"], "Yandex Market": ["яндекс маркет"]},
+            "пост создан вместе с Ozon",
+        )
+        self.assertEqual({hit["бренд"] for hit in competitors}, {"Ozon", "Yandex Market"})
+
+    def test_deep_plan_covers_every_source_row_and_keeps_evidence(self):
+        payload = [
+            {
+                "source_row": 4,
+                "sheet_name": "Несогласованные блогеры",
+                "ник": "demo_creator",
+                "ссылка": "https://www.tiktok.com/@demo_creator",
+                "подписчики": 3000000,
+                "прогноз_просмотров": 34896,
+                "прогноз_охватов": 30345,
+                "ER": "0.1%",
+                "CPV": "4.79 ₽",
+                "детали": {
+                    "роликов": 10, "выбросов": 2, "среднее_реакций": 4112,
+                    "er": 0.137, "er_views": 10.98, "без_текста": 2,
+                    "план_просмотров": None, "план_cpv": "", "разброс": [6597, 100400],
+                    "ошибка": None, "бренды": [],
+                    "мат": [{"url": "https://www.tiktok.com/@demo_creator/video/7000000000000000001",
+                             "хиты": [{"время": "00:00:30", "слово": "хуй",
+                                      "фраза": "если были бы мозги я бы хуй сюда поехал"}]}],
+                },
+            },
+            {
+                "source_row": 9, "sheet_name": "Несогласованные блогеры", "ник": "clean",
+                "ссылка": "https://www.tiktok.com/@clean", "подписчики": 100000,
+                "прогноз_просмотров": 10000, "прогноз_охватов": 8696, "ER": "2.5%", "CPV": "3.00 ₽",
+                "детали": {"роликов": 10, "выбросов": 0, "среднее_реакций": 2500,
+                            "er": 2.5, "er_views": 25, "без_текста": 0,
+                            "план_просмотров": None, "план_cpv": "", "разброс": [8000, 12000],
+                            "ошибка": None, "бренды": [], "мат": []},
+            },
+        ]
+        source = self.root / "deep-result.json"
+        source.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+        output = self.root / "deep-plan"
+        subprocess.run([sys.executable, str(MAKE_PASTE_SCRIPT), "--input", str(source), "--output", str(output)],
+                       check=True, capture_output=True, text=True, encoding="utf-8")
+        plan = json.loads((output / "sheet-write-plan.json").read_text(encoding="utf-8"))
+        self.assertEqual(plan["profiles_processed"], 2)
+        self.assertEqual(plan["writes"][0]["followers_range"], "H4")
+        self.assertEqual(plan["writes"][1]["analysis_range"], "N9:S9")
+        self.assertAlmostEqual(plan["writes"][0]["analysis_values"][2], 0.001)
+        comment = plan["writes"][0]["analysis_values"][5]
+        self.assertIn("00:00:30", comment)
+        self.assertIn("если были бы мозги", comment)
+        self.assertIn("@demo_creator/video/7000000000000000001", comment)
+        self.assertIn("без распознанной речи: 2", comment)
+
+    def test_deep_bootstrap_defaults_to_full_table_and_ten_videos(self):
+        shown = subprocess.run([sys.executable, str(DEEP_BOOTSTRAP_SCRIPT), "--help"],
+                               check=True, capture_output=True, text=True, encoding="utf-8")
+        self.assertIn("Вся таблица × 10 роликов", shown.stdout)
+        source = DEEP_BOOTSTRAP_SCRIPT.read_text(encoding="utf-8")
+        self.assertIn('parser.add_argument("--videos", type=int, default=10)', source)
+        self.assertIn('parser.add_argument("--max-profiles", type=int, default=0', source)
 
     def test_youtube_channel_is_routed_to_video_listing(self):
         self.assertEqual(
