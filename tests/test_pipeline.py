@@ -13,6 +13,7 @@ SCREEN_SCRIPT = ROOT / "skills" / "proverka-blogerov" / "scripts" / "demo_screen
 SHORTLIST_SCRIPT = ROOT / "skills" / "shortlist-blogerov" / "scripts" / "build_shortlist.py"
 VERIFY_SCRIPT = ROOT / "skills" / "shortlist-blogerov" / "scripts" / "verify_handoff.py"
 LIVE_SCRIPT = ROOT / "skills" / "proverka-blogerov" / "scripts" / "live_metrics.py"
+OPEN_TEMPLATE_SCRIPT = ROOT / "skills" / "proverka-blogerov" / "scripts" / "open_onegroup_template.py"
 BRIEF = ROOT / "skills" / "shortlist-blogerov" / "assets" / "campaign-brief.json"
 
 live_spec = importlib.util.spec_from_file_location("live_metrics", LIVE_SCRIPT)
@@ -83,6 +84,13 @@ class PipelineTest(unittest.TestCase):
         self.assertNotIn("example.test/3", row["evidence_urls"].split(" | ")[:2])
         self.assertEqual(row["speech_check"], "не проверялась в быстром live-режиме")
 
+    def test_er_over_100_is_not_silently_recommended(self):
+        candidate = {"participant": "", "handle": "@viral", "profile_url": "https://www.tiktok.com/@viral", "price_rub": "10000", "target_forecast_views": ""}
+        videos = [{"url": "https://example.test/viral", "views": 200000, "likes": 80000, "comments": 1000, "shares": 1000}]
+        row = live_metrics.calculate(candidate, {"followers": 50000}, videos, "2026-08-21T00:00:00+00:00")
+        self.assertEqual(row["decision"], "Брать с оговорками")
+        self.assertIn("выше 100%", row["reason"])
+
     def test_live_input_template_is_detected_without_network(self):
         input_path = self.root / "profiles.csv"
         input_path.write_text(
@@ -98,6 +106,36 @@ class PipelineTest(unittest.TestCase):
     def test_google_sheet_url_becomes_public_csv_export(self):
         url = live_metrics.google_csv_url("https://docs.google.com/spreadsheets/d/demo-id/edit#gid=42")
         self.assertEqual(url, "https://docs.google.com/spreadsheets/d/demo-id/export?format=csv&gid=42")
+
+    def test_template_opener_has_safe_non_browser_mode(self):
+        opened = subprocess.run(
+            [sys.executable, str(OPEN_TEMPLATE_SCRIPT), "--print-only"],
+            check=True, capture_output=True, text=True, encoding="utf-8",
+        )
+        self.assertIn("1DzqwIBC4nvX2VFtv6q2imZGHwpUxgDmg1jDvoAu90_s/copy", opened.stdout)
+
+    def test_onegroup_headers_and_exact_write_plan(self):
+        input_path = self.root / "onegroup.csv"
+        input_path.write_text(
+            "№,Ник ,Ссылка  на аккаунт ,Подписчики,Стоимость одной публикации,Прогноз просмотров по всем публикациям\n"
+            "1,avonri,https://www.tiktok.com/@avonri,,167300,\n",
+            encoding="utf-8",
+        )
+        candidates = live_metrics.read_candidates(input_path, None, 2)
+        self.assertEqual(candidates[0]["price_rub"], "167300")
+        self.assertEqual(candidates[0]["source_row"], "2")
+        row = live_metrics.calculate(
+            candidates[0], {"followers": 100000},
+            [{"url": "https://example.test/1", "views": 10000, "likes": 500, "comments": 20, "shares": 10}],
+            "2026-08-21T00:00:00+00:00",
+        )
+        live_metrics.write_outputs([row], [], self.root / "onegroup-out", "https://docs.google.com/spreadsheets/d/copy-id/edit")
+        plan = json.loads((self.root / "onegroup-out" / "sheet-write-plan.json").read_text(encoding="utf-8"))
+        self.assertTrue(plan["copy_required"])
+        self.assertEqual(plan["writes"][0]["followers_range"], "H2")
+        self.assertEqual(plan["writes"][0]["analysis_range"], "N2:S2")
+        self.assertAlmostEqual(plan["writes"][0]["analysis_values"][2], row["er_pct"] / 100)
+        self.assertIn("не проверялись", plan["writes"][0]["analysis_values"][5])
 
     def test_youtube_channel_is_routed_to_video_listing(self):
         self.assertEqual(

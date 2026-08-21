@@ -41,6 +41,8 @@ python3 skills/shortlist-blogerov/scripts/verify_handoff.py \
 
 ## Установка через Codex
 
-Попросите Codex с помощью `$skill-installer` установить навык по фиксированной ссылке `https://github.com/neiro-viktor/influencer-skill-lab/tree/v1.0.3-classroom/skills/proverka-blogerov`. После установки начните новый запрос и вызовите `$proverka-blogerov`. Codex обнаруживает новые навыки автоматически; перезапуск нужен только как запасной шаг, если навык не появился при вводе `$` или в `/skills`.
+Передайте Codex ссылку `https://github.com/neiro-viktor/influencer-skill-lab/tree/main/skills/proverka-blogerov` и попросите установить навык из GitHub. После установки начните новый запрос и вызовите `$proverka-blogerov`. Codex обнаруживает новые навыки автоматически; перезапуск нужен только как запасной шаг, если навык не появился при вводе `$` или в `/skills`.
+
+Для практики с Google Sheets навык открывает экран создания личной копии шаблона, читает первые две строки с публичными TikTok-профилями и готовит точные записи в H и N:S. Общий шаблон остаётся только для чтения.
 
 Подробный маршрут находится в [workshop/participant-guide.md](workshop/participant-guide.md).
