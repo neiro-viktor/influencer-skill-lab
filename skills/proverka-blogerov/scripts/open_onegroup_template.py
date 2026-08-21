@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import sys
 import webbrowser
 
 
@@ -11,6 +12,9 @@ TEMPLATE_COPY_URL = "https://docs.google.com/spreadsheets/d/1DzqwIBC4nvX2VFtv6q2
 
 
 def main() -> int:
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(encoding="utf-8")
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--print-only", action="store_true", help="Не открывать браузер; только показать ссылку")
     args = parser.parse_args()
