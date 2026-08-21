@@ -9,10 +9,10 @@
 Внутри Codex отправьте:
 
 ```text
-$skill-installer Установи навык по ссылке https://github.com/neiro-viktor/influencer-skill-lab/tree/v1.0.2-classroom/skills/proverka-blogerov. После установки покажи точный путь к папке навыка и ничего пока не запускай.
+$skill-installer Установи навык по ссылке https://github.com/neiro-viktor/influencer-skill-lab/tree/v1.0.3-classroom/skills/proverka-blogerov. После установки проверь наличие SKILL.md, покажи точный путь к папке навыка и ничего пока не запускай.
 ```
 
-Перезапустите Codex. Введите `/skills` и убедитесь, что виден «Проверка блогеров».
+Начните новый запрос и введите `$proverka` или откройте `/skills`: должен появиться навык «Проверка блогеров». Codex обнаруживает новые навыки автоматически. Только если навык не появился, перезапустите Codex и проверьте снова.
 
 ## 2. Запустить демо
 
