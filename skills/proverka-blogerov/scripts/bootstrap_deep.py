@@ -17,6 +17,11 @@ from bootstrap_live import prepare_runtime
 HERE = Path(__file__).resolve().parent
 DEFAULT_BRIEF = HERE.parent / "assets" / "onegroup-brief.json"
 
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+if hasattr(sys.stderr, "reconfigure"):
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+
 
 def sheet_id(value: str) -> str:
     match = re.search(r"/spreadsheets/d/([A-Za-z0-9_-]+)", value)
