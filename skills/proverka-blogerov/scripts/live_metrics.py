@@ -16,7 +16,7 @@ from urllib.parse import parse_qs, urlparse
 from urllib.request import Request, urlopen
 
 OUTPUT_FIELDS = [
-    "participant", "handle", "platform", "profile_url", "captured_at_utc",
+    "participant", "handle", "platform", "profile_url", "source_row", "captured_at_utc",
     "followers", "videos_opened", "median_views", "outliers_removed",
     "average_views_clean", "forecast_views", "forecast_reach", "er_pct",
     "price_rub", "cpv_rub", "target_forecast_views", "decision", "reason",
@@ -25,11 +25,12 @@ OUTPUT_FIELDS = [
 
 ALIASES = {
     "participant": ("participant", "участник", "менеджер", "автор"),
-    "profile_url": ("profile_url", "ссылка", "ссылка на блогера", "профиль", "url"),
+    "profile_url": ("profile_url", "ссылка", "ссылка на блогера", "ссылка на аккаунт", "профиль", "url"),
     "handle": ("handle", "ник", "никнейм", "блогер"),
-    "price_rub": ("price_rub", "цена", "стоимость", "цена публикации"),
+    "price_rub": ("price_rub", "цена", "стоимость", "цена публикации", "стоимость одной публикации"),
     "target_forecast_views": (
-        "target_forecast_views", "прогноз просмотров", "план просмотров", "целевые просмотры",
+        "target_forecast_views", "прогноз просмотров", "прогноз просмотров по всем публикациям",
+        "план просмотров", "целевые просмотры",
     ),
 }
 
@@ -211,6 +212,7 @@ def calculate(candidate: dict[str, str], profile: dict, videos: list[dict], capt
             **{field: "" for field in OUTPUT_FIELDS},
             "participant": candidate.get("participant", ""), "handle": handle,
             "platform": platform_of(candidate["profile_url"]), "profile_url": candidate["profile_url"],
+            "source_row": candidate.get("source_row", ""),
             "captured_at_utc": captured_at, "decision": "Проверить вручную", "reason": reason,
             "speech_check": "не проверялась", "evidence_urls": "",
         }
@@ -226,7 +228,10 @@ def calculate(candidate: dict[str, str], profile: dict, videos: list[dict], capt
     price = number(candidate.get("price_rub"))
     target = number(candidate.get("target_forecast_views"))
     cpv = price / forecast if price and forecast else None
-    if target and forecast < target * 0.75:
+    if er is not None and er > 100:
+        decision = "Брать с оговорками"
+        reason = "ER к базе подписчиков выше 100% — возможен вирусный эффект; проверить на 10 роликах"
+    elif target and forecast < target * 0.75:
         decision = "Брать с оговорками"
         reason = f"быстрый прогноз ниже цели на {(1 - forecast / target) * 100:.0f}%"
     else:
@@ -235,6 +240,7 @@ def calculate(candidate: dict[str, str], profile: dict, videos: list[dict], capt
     return {
         "participant": candidate.get("participant", ""), "handle": handle,
         "platform": platform_of(candidate["profile_url"]), "profile_url": candidate["profile_url"],
+        "source_row": candidate.get("source_row", ""),
         "captured_at_utc": captured_at, "followers": int(followers) if followers else "",
         "videos_opened": len(opened), "median_views": round(median_views),
         "outliers_removed": len(opened) - len(clean), "average_views_clean": round(average_views),
@@ -247,7 +253,64 @@ def calculate(candidate: dict[str, str], profile: dict, videos: list[dict], capt
     }
 
 
-def write_outputs(results: list[dict], evidence: list[dict], output: Path) -> None:
+def onegroup_verdict(row: dict) -> str:
+    if row.get("decision") == "Проверить вручную":
+        return "⚠️ ПРОВЕРИТЬ ВРУЧНУЮ — профиль не отдал метрики"
+    if row.get("decision") == "Брать с оговорками":
+        return "⚠️ С ОГОВОРКОЙ — прогноз ниже цели"
+    return "⚠️ ПРЕДВАРИТЕЛЬНО ПОДХОДИТ — контент проверить отдельно"
+
+
+def onegroup_comment(row: dict) -> str:
+    if not row.get("videos_opened"):
+        return f"LIVE-ПРОВЕРКА НЕ ЗАВЕРШЕНА. {row.get('reason', '')} ЧТО ДЕЛАТЬ: проверить профиль вручную или взять другую ссылку."
+    cpv = f"{row['cpv_rub']} ₽" if row.get("cpv_rub") != "" else "не рассчитан — нет стоимости"
+    evidence = row.get("evidence_urls") or "нет"
+    return (
+        f"QUICK-LIVE: открыто роликов — {row['videos_opened']}; прогноз просмотров — {row['forecast_views']}; "
+        f"прогноз охвата — {row['forecast_reach']}; ER — {row['er_pct']}%; CPV — {cpv}; "
+        f"исключено выбросов — {row['outliers_removed']}. Речь, мат, конкуренты и кадры в быстром режиме "
+        f"не проверялись. ЧТО ДЕЛАТЬ: перед финальным согласованием выполнить глубокий проход по 10 роликам. "
+        f"ДОКАЗАТЕЛЬСТВА: {evidence}"
+    )
+
+
+def write_onegroup_sheet_artifacts(results: list[dict], output: Path, sheet_url: str | None) -> None:
+    rows = [row for row in results if str(row.get("source_row", "")).isdigit()]
+    writes = []
+    for row in rows:
+        source_row = int(row["source_row"])
+        er_fraction = round(float(row["er_pct"]) / 100, 6) if row.get("er_pct") != "" else ""
+        writes.append({
+            "source_row": source_row,
+            "followers_range": f"H{source_row}",
+            "analysis_range": f"N{source_row}:S{source_row}",
+            "followers": row.get("followers", ""),
+            "analysis_values": [
+                row.get("forecast_views", ""), row.get("forecast_reach", ""), er_fraction,
+                row.get("cpv_rub", ""), onegroup_verdict(row), onegroup_comment(row),
+            ],
+        })
+    plan = {
+        "source_spreadsheet_url": sheet_url or "",
+        "sheet_name": "Несогласованные блогеры",
+        "copy_required": True,
+        "write_only_to_participant_copy": True,
+        "columns": {"H": "Подписчики", "N": "Прогноз просмотров", "O": "Прогноз охватов", "P": "ER", "Q": "CPV", "R": "Вердикт", "S": "Комментарий клиента"},
+        "writes": writes,
+    }
+    (output / "sheet-write-plan.json").write_text(
+        json.dumps(plan, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+    )
+    with (output / "for-onegroup-H.tsv").open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.writer(handle, delimiter="\t", lineterminator="\n")
+        writer.writerows([[item["followers"]] for item in writes])
+    with (output / "for-onegroup-N-S.tsv").open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.writer(handle, delimiter="\t", lineterminator="\n")
+        writer.writerows(item["analysis_values"] for item in writes)
+
+
+def write_outputs(results: list[dict], evidence: list[dict], output: Path, sheet_url: str | None = None) -> None:
     output.mkdir(parents=True, exist_ok=True)
     with (output / "live-results.csv").open("w", encoding="utf-8-sig", newline="") as handle:
         writer = csv.DictWriter(handle, fieldnames=OUTPUT_FIELDS, lineterminator="\n")
@@ -278,6 +341,8 @@ def write_outputs(results: list[dict], evidence: list[dict], output: Path) -> No
         "Для рабочего решения перезапустите профиль по 10 роликам и отдельно выполните глубокий контентный проход.",
     ])
     (output / "live-report.md").write_text("\n".join(report) + "\n", encoding="utf-8")
+    if sheet_url:
+        write_onegroup_sheet_artifacts(results, output, sheet_url)
 
 
 def main() -> int:
@@ -315,9 +380,11 @@ def main() -> int:
             profile, videos = {}, [{"error": f"{type(exc).__name__}: {str(exc)[:180]}"}]
         results.append(calculate(candidate, profile, videos, captured_at))
         evidence.append({"profile_url": candidate["profile_url"], "videos": videos})
-    write_outputs(results, evidence, args.output)
+    write_outputs(results, evidence, args.output, args.sheet_url)
     print(f"Готово: {len(results)} профилей → {args.output.resolve()}")
     print("Созданы live-results.csv, live-results.json, live-report.md и for-sheet.tsv")
+    if args.sheet_url:
+        print("Для копии таблицы созданы sheet-write-plan.json и два блока точной вставки H / N:S")
     return 0
 
 
