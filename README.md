@@ -36,6 +36,6 @@ python3 skills/shortlist-blogerov/scripts/verify_handoff.py \
 
 ## Установка через Codex
 
-Попросите Codex с помощью `$skill-installer` установить навык по фиксированной ссылке `https://github.com/neiro-viktor/influencer-skill-lab/tree/v1.0.2-classroom/skills/proverka-blogerov`. После установки перезапустите Codex, затем вызовите `$proverka-blogerov`.
+Попросите Codex с помощью `$skill-installer` установить навык по фиксированной ссылке `https://github.com/neiro-viktor/influencer-skill-lab/tree/v1.0.3-classroom/skills/proverka-blogerov`. После установки начните новый запрос и вызовите `$proverka-blogerov`. Codex обнаруживает новые навыки автоматически; перезапуск нужен только как запасной шаг, если навык не появился при вводе `$` или в `/skills`.
 
 Подробный маршрут находится в [workshop/participant-guide.md](workshop/participant-guide.md).

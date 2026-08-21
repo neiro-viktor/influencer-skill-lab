@@ -5,7 +5,7 @@
   "total_budget_rub": 90000,
   "required_platform": "TikTok",
   "owner": "учебная команда Onegroup Digital",
-  "artifact_version": "v1.0.2-classroom",
+  "artifact_version": "v1.0.3-classroom",
   "pilot": {
     "pilot_id": "blogger-shortlist-v1",
     "process_name": "Первичный отбор блогеров под интеграцию",
